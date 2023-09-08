@@ -1,6 +1,8 @@
 name: Fetch CPU Library
 on:
   workflow_dispatch:
+  schedule:
+    - cron: '0 12 * * *'
 jobs:
   libfetch:
     name: Fetch Library
@@ -23,3 +25,14 @@ jobs:
       with:
         name: cpu_lib
         path: ./cpu_lib.yaml
+    - name: Upload to server
+      env:
+        PRIVATE_KEY: ${{ secrets.ID_RSA_LS }}
+        SSH_PORT: ${{ secrets.SSH_PORT }}
+        USER: ${{ secrets.USER }}
+        HOST: ${{ secrets.HOST }}
+        DESTINATION: ${{ secrets.DESTINATION }}
+      run: |
+        echo "$PRIVATE_KEY" >> ./id_rsa_ls
+        chmod 600 ./id_rsa_ls
+        scp -P $SSH_PORT -i ./id_rsa_ls -o StrictHostKeyChecking=no ./cpu_lib.yaml $USER@HOST:$DESTINATION
