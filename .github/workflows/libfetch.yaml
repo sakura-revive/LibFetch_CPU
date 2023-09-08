@@ -1,0 +1,25 @@
+name: Fetch CPU Library
+on:
+  workflow_dispatch:
+jobs:
+  libfetch:
+    name: Fetch Library
+    runs-on: ubuntu-20.04
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11' 
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r ./requirements.txt
+    - name: Fetch CPU Library
+      run: |
+        python ./main.py
+    - name: Upload Rule File
+      uses: actions/upload-artifact@v3
+      with:
+        name: cpu_lib.yaml
+        path: ./cpu_lib.yaml

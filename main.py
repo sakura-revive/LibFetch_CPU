@@ -24,10 +24,10 @@ HEADERS = {
 }
 
 INTRANET_RULE = """  # 校园内网
-  - DOMAIN-SUFFIX,cpu.edu.cn
-  - IP-CIDR,202.119.176.0/20
-  - IP-CIDR,192.168.199.0/24
-  - IP-CIDR,10.0.0.0/8
+  - DOMAIN-SUFFIX,cpu.edu.cn # 学校主域名
+  - IP-CIDR,202.119.176.0/20 # 学校外网网段
+  - IP-CIDR,192.168.199.0/24 # 校园网登录及校内DNS服务器网段
+  - IP-CIDR,10.0.0.0/8 # 校园大内网网段
 """
 
 def get_articles(id, page=1):
