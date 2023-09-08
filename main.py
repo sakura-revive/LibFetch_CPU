@@ -2,7 +2,7 @@ import requests
 from bs4 import BeautifulSoup as bs
 import re
 import datetime
-
+import pytz
 
 DOMAIN = 'http://lib.cpu.edu.cn'
 ID = {
@@ -130,8 +130,11 @@ def fetch_url(library_raw):
     return library
 
 def generate_rules(library):
-    current_datetime = datetime.datetime.now()
-    formatted_datetime = current_datetime.strftime("%Y-%m-%d %H:%M:%S")
+    current_time_utc = datetime.datetime.now(pytz.utc)
+    eastern_timezone = pytz.timezone('Asia/Shanghai')
+    current_time_eastern = current_time_utc.astimezone(eastern_timezone)
+    formatted_datetime = current_time_eastern.strftime("%Y-%m-%d %H:%M:%S UTC+08:00 Asia/Shanghai")
+
     rules = "# LAST UPDATED: %s\npayload:\n" %(formatted_datetime)
     for database in library:
         rules += "  # %s\n" %(database['name'])
