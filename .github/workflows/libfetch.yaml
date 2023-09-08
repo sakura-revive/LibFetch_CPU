@@ -35,4 +35,4 @@ jobs:
       run: |
         echo "$PRIVATE_KEY" >> ./id_rsa_ls
         chmod 600 ./id_rsa_ls
-        scp -P $SSH_PORT -i ./id_rsa_ls -o StrictHostKeyChecking=no ./cpu_lib.yaml $USER@HOST:$DESTINATION
+        scp -P $SSH_PORT -i ./id_rsa_ls -o StrictHostKeyChecking=no ./cpu_lib.yaml $USER@$HOST:$DESTINATION
