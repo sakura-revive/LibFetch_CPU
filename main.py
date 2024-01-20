@@ -76,6 +76,9 @@ def get_domain_suffix(url):
 
     domain_parts = domain.split('.')
     parts = len(domain_parts)
+
+    if re.search(r'', str(url)) is not None: # ip address
+        return domain
     if parts<=2:
         domain_suffix = '.'.join(domain_parts[:])
     elif parts>=4:
@@ -114,6 +117,10 @@ def fetch_url(library_raw):
             html_doc = resp.text
             soup = bs(html_doc, 'html.parser')
             article_content = soup.find(class_='article')
+            if article_content is None:
+                print(f"data_raw['name']={data_raw['name']}\ndata_raw['menu_url']={data_raw['menu_url']}")
+                print(f"====\n{html_doc}\n====")
+                continue
             a_tag_list = article_content.find_all('a')
 
             domain_suffix_list = []
