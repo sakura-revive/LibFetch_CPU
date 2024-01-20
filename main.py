@@ -4,6 +4,7 @@ import re
 import datetime
 import pytz
 
+TZ = "Asia/Shanghai"
 DOMAIN = 'http://lib.cpu.edu.cn'
 ID = {
     # 'http://lib.cpu.edu.cn/1171/list.htm', # 中文数据库
@@ -23,11 +24,13 @@ HEADERS = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36 Edg/116.0.1938.62',
 }
 
-INTRANET_RULE = """  # 校园内网
+INTRANET_RULESET = """\
+  # 校园网段
   - DOMAIN-SUFFIX,cpu.edu.cn # 学校主域名
   - IP-CIDR,202.119.176.0/20 # 学校外网网段
-  - IP-CIDR,192.168.199.0/24 # 校园网登录及校内DNS服务器网段
+  - IP-CIDR,192.168.0.0/16 # 校园网登录及校内DNS服务器网段
   - IP-CIDR,10.0.0.0/8 # 校园大内网网段
+  - IP-CIDR,172.16.0.0/12 # 校园宽带登录及其它内网网段
 """
 
 def get_articles(id, page=1):
@@ -66,19 +69,19 @@ def build_library():
         library.append(dataset)
     return library
 
-def get_domain_suffix(url):
+def get_rule(url):
     match = re.search(r'https?://([A-Za-z0-9.-]+)', str(url))
     if match is None:
         return None
     domain = match.group(1)
-    if "cpu.edu.cn" in domain:
+    if "cpu.edu.cn" in domain or "weixin.qq.com" in domain:
         return None
 
     domain_parts = domain.split('.')
     parts = len(domain_parts)
 
-    if re.search(r'', str(url)) is not None: # ip address
-        return domain
+    if re.match(r'^(\d{1,3}\.){3}\d{1,3}$', str(domain)): # ip address
+        return f"IP-CIDR,{domain}/32"
     if parts<=2:
         domain_suffix = '.'.join(domain_parts[:])
     elif parts>=4:
@@ -91,15 +94,7 @@ def get_domain_suffix(url):
                 domain_suffix = '.'.join(domain_parts[1:])
             else:
                 domain_suffix = '.'.join(domain_parts[:])
-    return domain_suffix
-
-def merge(domain_suffix_list):
-    res = []
-    domain_suffix_list_no_redundancy = list(set(domain_suffix_list))
-    for domain_suffix in domain_suffix_list_no_redundancy:
-        if domain_suffix != 'cpu.edu.cn' and domain_suffix != 'weixin.qq.com':
-            res.append(domain_suffix)
-    return res
+    return f"DOMAIN-SUFFIX,{domain_suffix}"
 
 def fetch_url(library_raw):
     library = []
@@ -118,44 +113,48 @@ def fetch_url(library_raw):
             soup = bs(html_doc, 'html.parser')
             article_content = soup.find(class_='article')
             if article_content is None:
-                print(f"data_raw['name']={data_raw['name']}\ndata_raw['menu_url']={data_raw['menu_url']}")
-                print(f"====\n{html_doc}\n====")
+                data['rule_list'] = [
+                    f"# Error: Access denied",
+                    f"# [{data_raw['menu_url']}]"
+                ]
+                database['data'].append(data)
                 continue
             a_tag_list = article_content.find_all('a')
 
-            domain_suffix_list = []
+            rule_list = []
             for a_tag in a_tag_list:
                 # url = a_tag.get('href')
                 url = a_tag.get_text()
-                domain_suffix = get_domain_suffix(url=url)
-                if domain_suffix is None:
+
+                rule = get_rule(url=url)
+                if rule is None:
                     continue
-                domain_suffix_list.append(domain_suffix)
-            data['url_list'] = merge(domain_suffix_list)
+                rule_list.append(rule)
+            data['rule_list'] = list(set(rule_list))
             database['data'].append(data)
         library.append(database)
     return library
 
-def generate_rules(library):
+def generate_ruleset(library):
     current_time_utc = datetime.datetime.now(pytz.utc)
-    eastern_timezone = pytz.timezone('Asia/Shanghai')
-    current_time_eastern = current_time_utc.astimezone(eastern_timezone)
-    formatted_datetime = current_time_eastern.strftime("%Y-%m-%d %H:%M:%S UTC+08:00 Asia/Shanghai")
+    expected_timezone = pytz.timezone(TZ)
+    current_time_expected = current_time_utc.astimezone(expected_timezone)
+    formatted_datetime = current_time_expected.strftime("%Y-%m-%d %H:%M:%S UTC+08:00 Asia/Shanghai")
 
-    rules = "# LAST UPDATED: %s\npayload:\n" %(formatted_datetime)
+    ruleset = f"# LAST UPDATED: {formatted_datetime}\npayload:\n"
     for database in library:
-        rules += "  # %s\n" %(database['name'])
+        ruleset += f"  # {database['name']}\n"
         for data in database['data']:
-            for url in data['url_list']:
-                rules += "  - DOMAIN-SUFFIX,%s # %s\n" %(url, data['name'])
-        rules += '\n'
-    rules += INTRANET_RULE
-    return rules
+            for rule in data['rule_list']:
+                ruleset += f"  - {rule} # {data['name']}\n"
+        ruleset += '\n'
+    ruleset += INTRANET_RULESET
+    return ruleset
 
 def main():
     library_raw = build_library()
     library = fetch_url(library_raw=library_raw)
-    rule_text = generate_rules(library=library)
+    rule_text = generate_ruleset(library=library)
     with open("cpu_lib.yaml", 'w', encoding='utf-8') as f:
         f.write(rule_text)
 
