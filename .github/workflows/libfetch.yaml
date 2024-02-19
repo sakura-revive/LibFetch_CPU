@@ -10,7 +10,7 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - name: Set up Python 3.11
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: '3.11' 
     - name: Install dependencies
@@ -19,9 +19,9 @@ jobs:
         pip install -r ./requirements.txt
     - name: Fetch CPU Library
       run: |
-        python ./main.py
+        python -u ./main.py
     - name: Upload Rule File
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: cpu_lib
         path: ./cpu_lib.yaml
@@ -32,7 +32,4 @@ jobs:
         USER: ${{ secrets.USER }}
         PASSWORD: ${{ secrets.PASSWORD }}
       run: |
-        # echo "$PRIVATE_KEY" >> ./id_rsa_ls
-        # chmod 600 ./id_rsa_ls
-        # scp -P ${SSH_PORT} -i ./id_rsa_ls -o StrictHostKeyChecking=no ./cpu_lib.yaml ${USER}@${HOST}:${DESTINATION}/
         curl -T ./cpu_lib.yaml "${HOST}${DESTINATION}/cpu_lib.yaml" -u ${USER}:${PASSWORD}
